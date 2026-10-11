@@ -1,0 +1,26 @@
+{
+  "name": "fullstack-starter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --if-present dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "test": "pnpm -r --if-present test",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test",
+    "db:generate": "pnpm --filter @starter/api db:generate",
+    "db:migrate": "pnpm --filter @starter/api db:migrate",
+    "db:seed": "pnpm --filter @starter/api db:seed"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15"
+  }
+}

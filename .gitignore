@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test output
+coverage/
+
+# Environment (only the documented example is versioned)
+.env
+.env.*
+!.env.example
+
+# Tooling caches
+.turbo/
+.tanstack/
+
+# Logs and OS files
+*.log
+.DS_Store
