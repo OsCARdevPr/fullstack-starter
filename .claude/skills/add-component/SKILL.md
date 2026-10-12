@@ -14,7 +14,7 @@ Load before creating any React component in `apps/web`, or when the user asks fo
 ## Hard Rules
 
 - Search before creating: `apps/web/src/components/ui/` already holds the full shadcn catalog; `components/{layout,feedback,data,form}` hold the app's shared components.
-- Add or update shadcn components only with `pnpm --dir apps/web exec shadcn add <name> --diff`; NEVER pass `--overwrite`.
+- Preview a shadcn component with `pnpm --dir apps/web exec shadcn add <name> --diff` (writes nothing), then apply it with `pnpm --dir apps/web exec shadcn add <name>`; NEVER pass `--overwrite`.
 - Blocks (`dashboard-01`, `login-03`...) overwrite `ui/*`: preview with `--dry-run` or `--view`, then copy the parts you need into a feature folder.
 - No business logic or API calls in `components/ui/`.
 - Colors and radii come from theme tokens (`bg-primary`, `text-muted-foreground`); never hard-code colors. `src/styles/theme.css` is the only token file: move tokens that `shadcn add` writes to `globals.css` into it.
@@ -24,7 +24,7 @@ Load before creating any React component in `apps/web`, or when the user asks fo
 
 | Component | Location |
 |---|---|
-| Generic primitive missing from `components/ui` | `shadcn add <name> --diff` (the shadcn MCP in `.mcp.json` can search the registry) |
+| Generic primitive missing from `components/ui` | preview with `shadcn add <name> --diff`, apply with `shadcn add <name>` (the shadcn MCP in `.mcp.json` can search the registry) |
 | Used by two or more features | `components/layout`, `feedback`, `data` or `form`; export it from that folder's `index.ts` |
 | Used by one feature | `apps/web/src/features/<feature>/components/` |
 
