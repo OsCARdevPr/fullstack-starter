@@ -3,19 +3,11 @@ import {
   type ErrorComponentProps,
   Link,
   Outlet,
-  useRouter,
 } from "@tanstack/react-router";
 import type { RouterContext } from "@/app/router";
+import { EmptyState, RouteError } from "@/components/feedback";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Toaster } from "@/components/ui/sonner";
-import { getErrorMessage, isApiError } from "@/lib/api-error";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
@@ -26,42 +18,35 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 function RootLayout() {
   return (
     <>
-      <Outlet />
+      {/* Full-height column so error and empty states can center themselves. */}
+      <div className="flex min-h-svh flex-col">
+        <Outlet />
+      </div>
       <Toaster richColors closeButton />
     </>
   );
 }
 
-function RootError({ error }: ErrorComponentProps) {
-  const router = useRouter();
+// Replaces the whole page, so it brings its own full-height column.
+function RootError(props: ErrorComponentProps) {
   return (
-    <Empty className="min-h-svh">
-      <EmptyHeader>
-        <EmptyTitle>Something went wrong</EmptyTitle>
-        <EmptyDescription>{getErrorMessage(error)}</EmptyDescription>
-        {isApiError(error) && error.requestId && (
-          <EmptyDescription className="text-xs">Reference: {error.requestId}</EmptyDescription>
-        )}
-      </EmptyHeader>
-      <EmptyContent>
-        <Button onClick={() => router.invalidate()}>Try again</Button>
-      </EmptyContent>
-    </Empty>
+    <div className="flex min-h-svh flex-col">
+      <RouteError {...props} />
+    </div>
   );
 }
 
 function NotFound() {
   return (
-    <Empty className="min-h-svh">
-      <EmptyHeader>
-        <EmptyTitle>Page not found</EmptyTitle>
-        <EmptyDescription>The page you are looking for does not exist.</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
+    <EmptyState
+      className="min-h-svh"
+      title="Page not found"
+      description="The page you are looking for does not exist."
+      action={
         <Button asChild>
           <Link to="/">Go home</Link>
         </Button>
-      </EmptyContent>
-    </Empty>
+      }
+    />
   );
 }

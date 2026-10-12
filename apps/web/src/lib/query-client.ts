@@ -1,11 +1,16 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getErrorMessage, isApiError } from "./api-error";
+import { type ApiErrorCode, getErrorMessage, isApiError } from "./api-error";
 
 /** Options every query and mutation can set through `meta`. */
 export interface RequestMeta extends Record<string, unknown> {
   /** The caller handles errors itself: no global toast and no sign-in redirect. */
   silent?: boolean;
+  /**
+   * Error codes the caller shows itself, e.g. a form that puts CONFLICT and VALIDATION_ERROR on
+   * its fields. Those get no toast; any other error still does, and UNAUTHENTICATED still signs out.
+   */
+  handledErrors?: ApiErrorCode[];
 }
 
 declare module "@tanstack/react-query" {
@@ -30,7 +35,8 @@ export interface QueryClientOptions {
 
 /**
  * The app's QueryClient. Every failed query or mutation shows a toast with the error message,
- * unless it sets `meta: { silent: true }`. An expired session clears the cache and signs out.
+ * unless it sets `meta: { silent: true }` or lists the error code in `meta.handledErrors`.
+ * An expired session clears the cache and signs out.
  */
 export function createQueryClient({ onUnauthenticated }: QueryClientOptions): QueryClient {
   const handleError = (error: unknown, meta: RequestMeta | undefined) => {
@@ -40,6 +46,7 @@ export function createQueryClient({ onUnauthenticated }: QueryClientOptions): Qu
       onUnauthenticated();
       return;
     }
+    if (isApiError(error) && meta?.handledErrors?.includes(error.code)) return;
     toast.error(getErrorMessage(error));
   };
 

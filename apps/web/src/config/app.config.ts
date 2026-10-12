@@ -3,7 +3,7 @@
  * The sidebar, the sign-in screens and the page title read from here.
  */
 import type { LinkProps } from "@tanstack/react-router";
-import { Boxes, House, type LucideIcon } from "lucide-react";
+import { Boxes, FolderKanban, LayoutDashboard, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -24,5 +24,8 @@ const name = import.meta.env.VITE_APP_NAME?.trim() || "Fullstack Starter";
 export const appConfig: AppConfig = {
   name,
   logo: { icon: Boxes, text: name },
-  navItems: [{ label: "Home", to: "/", icon: House }],
+  navItems: [
+    { label: "Dashboard", to: "/", icon: LayoutDashboard },
+    { label: "Projects", to: "/projects", icon: FolderKanban },
+  ],
 };

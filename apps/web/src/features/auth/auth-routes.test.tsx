@@ -1,64 +1,29 @@
 import type { PublicConfig } from "@starter/contracts";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { createAppRouter } from "@/app/router";
-import { ThemeProvider } from "@/app/theme-provider";
-import { createQueryClient } from "@/lib/query-client";
+import { screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { buildMe, renderApp, stubApi as stubRoutes } from "@/test/render-app";
 
-const signedOut = Response.json(
-  { error: { code: "UNAUTHENTICATED", message: "Authentication required.", requestId: "r1" } },
-  { status: 401 },
-);
+const signedOut = () =>
+  Response.json(
+    { error: { code: "UNAUTHENTICATED", message: "Authentication required.", requestId: "r1" } },
+    { status: 401 },
+  );
 
-const signedIn = Response.json({
-  data: {
-    user: {
-      id: "user-1",
-      name: "Ada Lovelace",
-      email: "ada@example.com",
-      emailVerified: true,
-      image: null,
-      role: "user",
-    },
-    organization: { id: "org-1", name: "Acme", slug: "acme" },
-    role: "owner",
-    tenancyMode: "single",
-  },
-});
+const signedIn = () => Response.json({ data: buildMe() });
 
 /** Fakes the API: `/api/me` answers with `me`, `/api/config` with `config`. */
-function stubApi({ me, config }: { me: Response; config: PublicConfig }) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.endsWith("/api/me")) return me.clone();
-      if (url.endsWith("/api/config")) return Response.json({ data: config });
-      return new Response(null, { status: 404 });
-    }),
-  );
-}
-
-function renderApp(path: string) {
-  const queryClient = createQueryClient({ onUnauthenticated: vi.fn() });
-  const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: [path] }));
-  render(
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
-  return router;
+function stubApi({ me, config }: { me: () => Response; config: PublicConfig }) {
+  stubRoutes({
+    "GET /api/me": me,
+    "GET /api/config": () => Response.json({ data: config }),
+  });
 }
 
 describe("auth routes", () => {
   it("redirects signed-out visitors to sign-in and remembers where they were going", async () => {
     stubApi({ me: signedOut, config: { tenancyMode: "single", allowSignup: true } });
 
-    const router = renderApp("/");
+    const { router } = renderApp("/");
 
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/sign-in");
@@ -88,7 +53,7 @@ describe("auth routes", () => {
   it("sends /sign-up back to sign-in when sign-up is not allowed", async () => {
     stubApi({ me: signedOut, config: { tenancyMode: "single", allowSignup: false } });
 
-    const router = renderApp("/sign-up");
+    const { router } = renderApp("/sign-up");
 
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/sign-in");

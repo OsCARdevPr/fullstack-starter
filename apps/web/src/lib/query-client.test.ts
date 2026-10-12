@@ -48,6 +48,26 @@ describe("createQueryClient", () => {
     expect(toast.error).toHaveBeenCalledWith("Bad input.");
   });
 
+  it("leaves the error codes listed in meta.handledErrors to the caller", async () => {
+    const client = createQueryClient({ onUnauthenticated: vi.fn() });
+    const conflict = new ApiError({ code: "CONFLICT", status: 409, message: "Taken." });
+    const mutation = (error: Error) =>
+      client.getMutationCache().build(client, {
+        mutationFn: failWith(error),
+        meta: { handledErrors: ["CONFLICT"] },
+      });
+
+    await mutation(conflict)
+      .execute(undefined)
+      .catch(() => {});
+    expect(toast.error).not.toHaveBeenCalled();
+
+    await mutation(badRequest)
+      .execute(undefined)
+      .catch(() => {});
+    expect(toast.error).toHaveBeenCalledWith("Bad input.");
+  });
+
   it("clears the cache and calls onUnauthenticated when the session is gone", async () => {
     const onUnauthenticated = vi.fn();
     const client = createQueryClient({ onUnauthenticated });

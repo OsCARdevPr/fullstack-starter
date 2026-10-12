@@ -32,8 +32,9 @@ const UNEXPECTED_RESPONSE = "The server returned an unexpected response.";
 /**
  * Awaits an RPC call and returns its success body, or throws an ApiError:
  * the contract error envelope when present, `NETWORK_ERROR` when the server was unreachable.
+ * Accepts any response format: RPC types a 204 (e.g. DELETE) as "body" and the rest as "json".
  */
-export async function unwrap<R extends ClientResponse<unknown, number, "json">>(
+export async function unwrap<R extends ClientResponse<unknown, number, string>>(
   request: Promise<R>,
 ): Promise<SuccessBody<R>> {
   let response: R;
