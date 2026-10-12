@@ -1,0 +1,27 @@
+# Local PostgreSQL for development and integration tests.
+#   docker compose -f docker/compose.dev.yaml up -d
+# DATABASE_URL=postgres://app:app@localhost:5432/app
+# DATABASE_URL_TEST=postgres://app:app@localhost:5432/app_test (created by the integration tests)
+name: fullstack-starter-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql/<major>, so mount the parent.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

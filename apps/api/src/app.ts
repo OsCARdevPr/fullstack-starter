@@ -15,6 +15,7 @@ import type { AppDeps } from "./deps";
 import { createAuthRouter } from "./modules/auth";
 import { createHealthRouter } from "./modules/health";
 import { createMeRouter } from "./modules/me";
+import { createProjectsRouter } from "./modules/projects";
 
 export type { AppDeps } from "./deps";
 
@@ -44,7 +45,8 @@ export function createApp(deps: AppDeps) {
   return app
     .route("/api/health", createHealthRouter(deps))
     .route("/api/auth", createAuthRouter(deps))
-    .route("/api/me", createMeRouter(deps));
+    .route("/api/me", createMeRouter(deps))
+    .route("/api/projects", createProjectsRouter(deps));
 }
 
 /** Route types for `hc<AppType>()` in the web app. Import as a type only. */

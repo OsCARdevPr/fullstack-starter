@@ -1,5 +1,11 @@
-import type { Me } from "@starter/contracts";
-import { hc, type InferResponseType } from "hono/client";
+import type {
+  CreateProjectInput,
+  ListProjectsQueryInput,
+  Me,
+  PaginatedEnvelope,
+  Project,
+} from "@starter/contracts";
+import { hc, type InferRequestType, type InferResponseType } from "hono/client";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { type AppType, createApp } from "./app";
 import { buildSessionData, createTestDeps } from "./test/fakes";
@@ -28,5 +34,32 @@ describe("AppType RPC client", () => {
       data: Me;
     }>();
     expect(response.status).toBe(200);
+  });
+
+  it("types the projects routes from the shared contracts", async () => {
+    const client = createClient();
+    const projects = client.api.projects;
+    const project = projects[":id"];
+
+    expectTypeOf<InferResponseType<typeof projects.$get, 200>>().toEqualTypeOf<
+      PaginatedEnvelope<Project>
+    >();
+    expectTypeOf<InferResponseType<typeof project.$get, 200>>().toEqualTypeOf<{ data: Project }>();
+    expectTypeOf<InferResponseType<typeof projects.$post, 201>>().toEqualTypeOf<{
+      data: Project;
+    }>();
+    expectTypeOf<InferResponseType<typeof project.$patch, 200>>().toEqualTypeOf<{
+      data: Project;
+    }>();
+    expectTypeOf<
+      InferRequestType<typeof projects.$post>["json"]
+    >().toEqualTypeOf<CreateProjectInput>();
+    expectTypeOf<InferRequestType<typeof projects.$get>["query"]>().toExtend<
+      Pick<ListProjectsQueryInput, "q" | "status" | "sort" | "order">
+    >();
+
+    // Coerced query fields (page, pageSize) are typed as strings on the client.
+    const response = await projects.$get({ query: { page: "2", status: "archived" } });
+    expect(response.status).toBe(401);
   });
 });
