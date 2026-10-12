@@ -113,8 +113,8 @@ describe("createApp", () => {
     });
     const body = apiErrorBodySchema.parse(await response.json());
 
-    expect(response.status).toBe(400);
-    expect(body.error.code).toBe("BAD_REQUEST");
+    expect(response.status).toBe(413);
+    expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
   });
 
   it("applies the general rate limit to API routes", async () => {

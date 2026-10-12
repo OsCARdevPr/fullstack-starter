@@ -1,7 +1,7 @@
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { badRequest } from "../errors";
+import { payloadTooLarge } from "../errors";
 
 /** Hono's secure header defaults plus a CSP that suits a JSON-only API. */
 export function securityHeaders() {
@@ -22,12 +22,12 @@ export function apiCors(webOrigin: string) {
   });
 }
 
-/** Rejects oversized bodies. The contract has no 413 code, so this is a BAD_REQUEST. */
+/** Rejects oversized bodies with 413 PAYLOAD_TOO_LARGE, the same answer nginx gives. */
 export function limitBody(maxBytes: number) {
   return bodyLimit({
     maxSize: maxBytes,
     onError: () => {
-      throw badRequest(`The request body exceeds the ${maxBytes}-byte limit.`, { maxBytes });
+      throw payloadTooLarge(maxBytes);
     },
   });
 }

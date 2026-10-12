@@ -4,7 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import postgres from "postgres";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { AppError, conflict, notFound, validationFailed } from "./app-error";
+import { AppError, conflict, notFound, payloadTooLarge, validationFailed } from "./app-error";
 import { toErrorResponse } from "./to-error-response";
 
 const production = { requestId: "req-1", isDevelopment: false };
@@ -41,7 +41,7 @@ describe("toErrorResponse", () => {
     [403, "FORBIDDEN", 403],
     [404, "NOT_FOUND", 404],
     [409, "CONFLICT", 409],
-    [413, "BAD_REQUEST", 400],
+    [413, "PAYLOAD_TOO_LARGE", 413],
     [422, "VALIDATION_ERROR", 422],
     [429, "RATE_LIMITED", 429],
     [503, "SERVICE_UNAVAILABLE", 503],
@@ -134,6 +134,17 @@ describe("toErrorResponse", () => {
   it("keeps the message of a deliberate AppError even when it is a 5xx", () => {
     const error = new AppError("SERVICE_UNAVAILABLE", "Database is unreachable.");
     expect(toErrorResponse(error, production).body.error.message).toBe("Database is unreachable.");
+  });
+
+  it("maps payloadTooLarge to 413 PAYLOAD_TOO_LARGE with the byte limit", () => {
+    const result = toErrorResponse(payloadTooLarge(1024), production);
+
+    expect(result.status).toBe(413);
+    expect(result.body.error).toMatchObject({
+      code: "PAYLOAD_TOO_LARGE",
+      message: "The request body exceeds the 1024-byte limit.",
+      details: { maxBytes: 1024 },
+    });
   });
 
   it("keeps validation details produced by validationFailed", () => {

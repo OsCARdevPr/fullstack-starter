@@ -7,6 +7,7 @@ export const DEFAULT_ERROR_MESSAGES: Record<ErrorCode, string> = {
   FORBIDDEN: "You do not have permission to perform this action.",
   NOT_FOUND: "The requested resource was not found.",
   CONFLICT: "The request conflicts with the current state of the resource.",
+  PAYLOAD_TOO_LARGE: "The request body is too large.",
   VALIDATION_ERROR: "The request contains invalid fields.",
   RATE_LIMITED: "Too many requests. Try again later.",
   INTERNAL_ERROR: "An unexpected error occurred.",
@@ -48,6 +49,13 @@ export function notFound(message?: string, details?: unknown) {
 
 export function conflict(message?: string, details?: unknown) {
   return new AppError("CONFLICT", message, { details });
+}
+
+/** The body is larger than the API accepts (nginx answers the same code in production). */
+export function payloadTooLarge(maxBytes: number) {
+  return new AppError("PAYLOAD_TOO_LARGE", `The request body exceeds the ${maxBytes}-byte limit.`, {
+    details: { maxBytes },
+  });
 }
 
 export function validationFailed(details: ValidationErrorDetails, message?: string) {
