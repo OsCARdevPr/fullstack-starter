@@ -112,7 +112,9 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
 
 ## Delivery
 
-- Strategy: `exception-ok` for now — new template repo with no remote and no PR planned; work-unit commits per task on `feat/fullstack-starter`. Revisit slicing if the user publishes it.
+- Strategy: `exception-ok` — template repo, no PR flow; work-unit commits per task on `feat/fullstack-starter`.
+- Published 2026-10-11 at user request: https://github.com/OsCARdevPr/fullstack-starter (private, marked as GitHub template, default branch `main`). `main` was fast-forwarded to `b919cec` (T1 + T2). Updating `main` after later tasks is a user decision per push.
+- The user's global `~/.claude/CLAUDE.md` now asks before every new project whether to start from this template.
 - Forecast: well above 400 authored lines in total (multi-package template).
 
 ## Progress / evidence
