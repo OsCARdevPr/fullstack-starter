@@ -85,6 +85,24 @@ describe("AppShell", () => {
     );
   });
 
+  it("shows a retry inside the menu when the organizations fail to load", async () => {
+    vi.mocked(authClient.organization.list).mockResolvedValueOnce({
+      data: null,
+      error: { status: 403, message: "Forbidden." },
+    } as never);
+    stubSignedIn(buildMe({ tenancyMode: "multi" }));
+    renderApp("/");
+
+    await userEvent.click(await screen.findByRole("button", { name: /Acme/ }));
+    expect(await screen.findByText("Couldn't load organizations.")).toBeVisible();
+    expect(screen.queryByRole("menuitem", { name: "Globex" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Retry" }));
+
+    expect(await screen.findByRole("menuitem", { name: "Globex" })).toBeVisible();
+    expect(screen.queryByText("Couldn't load organizations.")).not.toBeInTheDocument();
+  });
+
   it("asks multi-mode users without an organization to create one", async () => {
     stubSignedIn(buildMe({ tenancyMode: "multi", organization: null, role: null }));
     renderApp("/");

@@ -1,6 +1,6 @@
 import type { OrganizationSummary } from "@starter/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Plus, RotateCw } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -67,6 +67,25 @@ function OrganizationMenu({ active }: { active: OrganizationSummary | null }) {
               Organizations
             </DropdownMenuLabel>
             {organizations.isPending && <DropdownMenuItem disabled>Loading…</DropdownMenuItem>}
+            {/* A failed first load gets no toast (see query-client.ts), so it is shown here. */}
+            {organizations.isError && !organizations.data && (
+              <>
+                <DropdownMenuLabel className="font-normal text-destructive">
+                  Couldn't load organizations.
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  disabled={organizations.isFetching}
+                  onSelect={(event) => {
+                    // Keep the menu open so the list shows up once it loads.
+                    event.preventDefault();
+                    void organizations.refetch();
+                  }}
+                >
+                  <RotateCw aria-hidden />
+                  Retry
+                </DropdownMenuItem>
+              </>
+            )}
             {organizations.data?.map((organization) => (
               <DropdownMenuItem
                 key={organization.id}

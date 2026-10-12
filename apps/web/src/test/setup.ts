@@ -21,3 +21,17 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) satisfies MediaQueryList;
 }
+
+// jsdom does not implement ResizeObserver; Radix (checkbox, switch) and cmdk (command list) use it.
+if (!window.ResizeObserver) {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+// jsdom does not implement scrollIntoView; cmdk scrolls the highlighted item into view.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
