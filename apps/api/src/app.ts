@@ -13,6 +13,7 @@ import {
 } from "./core/middleware";
 import type { AppDeps } from "./deps";
 import { createAuthRouter } from "./modules/auth";
+import { createConfigRouter } from "./modules/config";
 import { createHealthRouter } from "./modules/health";
 import { createMeRouter } from "./modules/me";
 import { createProjectsRouter } from "./modules/projects";
@@ -44,6 +45,7 @@ export function createApp(deps: AppDeps) {
   // Chained so AppType carries every route for the typed RPC client.
   return app
     .route("/api/health", createHealthRouter(deps))
+    .route("/api/config", createConfigRouter(deps))
     .route("/api/auth", createAuthRouter(deps))
     .route("/api/me", createMeRouter(deps))
     .route("/api/projects", createProjectsRouter(deps));

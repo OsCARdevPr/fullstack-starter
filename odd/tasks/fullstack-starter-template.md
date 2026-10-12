@@ -105,7 +105,7 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
   - [ ] **T1a `.env.example`** — blocked: writing `.env*` files is denied by the user's permission settings. Content is drafted; pending user decision.
 - [x] **T2 API core** — env, db client, auth schema, Better Auth, middleware stack, error system, `health` and `me` modules, tests for error handling and validation. Route: delegated writer.
 - [x] **T3 API example module** — `projects` tenant-scoped CRUD (routes/service/repository), migrations, seed (admin + default org), integration tests against Postgres. Route: delegated writer.
-- [ ] **T4 Web foundation** — Vite + React 19 + Tailwind v4 + shadcn/ui init, `theme.css` tokens + dark mode, providers, api client + `ApiError`, auth client, router with guards, sign-in/sign-up pages, tests. Route: delegated writer.
+- [x] **T4 Web foundation** — Vite + React 19 + Tailwind v4 + shadcn/ui init, `theme.css` tokens + dark mode, providers, api client + `ApiError`, auth client, router with guards, sign-in/sign-up pages, tests. Route: delegated writer.
 - [ ] **T5 Web app shell + global components + projects feature** — AppShell/AppSidebar from `app.config.ts`, Topbar, UserMenu, OrgSwitcher, feedback/data/form components, projects list/create/edit/delete. Route: delegated writer.
 - [ ] **T6 Containers** — multi-stage Dockerfiles (api, web/nginx), compose files, healthchecks, non-root users, migrate service. Route: delegated writer.
 - [ ] **T7 Docs** — README quick start, architecture, conventions (DRY rules, adding a module), rebranding guide. Route: delegated writer.
@@ -133,7 +133,8 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
 |---|---|---|---|---|
 | T1 | delegated | 87dbfee | RED: 4/4 test files failed (missing modules). GREEN: `pnpm verify` exit 0 — tsc clean, biome 14 files clean, 59/59 tests. Parent spot check: `pnpm verify` 59/59. | medium, `slice_budget_reached`; consent granted (lineage review-69d3bb21b269fbb3, lens review-reliability). Capture failed in preflight: the host `claude` CLI is not logged in (environment). Slot re-offered by STATUS; pending user decision. |
 | T2 | delegated | b919cec | RED: 14/14 api test files + contracts `me.test.ts` failed (missing modules). GREEN: `pnpm verify` exit 0 — biome 76 files, contracts 65/65, api 105/105. Build: `dist/index.mjs` 34 kB, contracts inlined. Smoke (prod mode): `/api/health` 200, unknown route 404 envelope + matching `x-request-id`, `/ready` 503 without DB, SIGTERM clean exit. Parent spot check: `pnpm verify` 65/65 + 105/105. | pending (reviewer unavailable: host `claude` CLI logged out) |
-| T3 | delegated | (this commit) | RED: projects unit tests (missing module), RPC test (404 + TS2339), seed test (missing module). GREEN: `pnpm verify` — biome 88 files, contracts 65/65, api 122/122 (DB-free). `pnpm test:integration` 11/11 twice against throwaway Postgres 18; mutation check (removed org filter + LIKE escaping) made 2 integration tests fail, then restored. Seed run twice: idempotent. Build 44.89 kB. Parent spot check: `pnpm verify` 65/65 + 122/122. | pending (reviewer unavailable: host `claude` CLI logged out) |
+| T3 | delegated | d537d45 | RED: projects unit tests (missing module), RPC test (404 + TS2339), seed test (missing module). GREEN: `pnpm verify` — biome 88 files, contracts 65/65, api 122/122 (DB-free). `pnpm test:integration` 11/11 twice against throwaway Postgres 18; mutation check (removed org filter + LIKE escaping) made 2 integration tests fail, then restored. Seed run twice: idempotent. Build 44.89 kB. Parent spot check: `pnpm verify` 65/65 + 122/122. | pending (reviewer unavailable: host `claude` CLI logged out) |
+| T4 | delegated | (this commit) | RED: contracts config (missing module), API 3 tests + TS2339, web lib 4 files (missing modules). GREEN: `pnpm verify` — biome 142 files, contracts 69/69, api 126/126, web 54/54. Route/sign-in UI tests written after code (exception); mutation check broke 3 guards -> 3 failures, restored. Web build OK. Smoke via Vite proxy: `/api/config` 200, `/api/me` 401 envelope, seed admin sign-in sets httpOnly SameSite=Lax cookie, `/api/me` 200 owner. Parent spot check: `pnpm verify` 69/69 + 126/126 + 54/54. | pending (reviewer unavailable) |
 
 ### Notes for later tasks (from T1)
 
@@ -144,6 +145,18 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
 - `totalPages = 0` when `total = 0`; `ERROR_STATUS` keeps literal status types for `c.json(body, status)`.
 - `updateProjectSchema` is built from default-free fields (Zod 4 `.partial()` still applies defaults).
 - T2: reject the dev placeholder `BETTER_AUTH_SECRET` in production. T4: Vite `envDir` = repo root.
+
+### Notes for later tasks (from T4)
+
+- `GET /api/config` (public) -> `{ tenancyMode, allowSignup }`; contracts `publicConfigSchema`.
+- shadcn preset `vega` (Radix base, neutral, Inter). Installed: button, input, label, textarea, select, card, badge, separator, skeleton, avatar, dropdown-menu, dialog, alert-dialog, sheet, tooltip, table, pagination, breadcrumb, sidebar, sonner, field, alert, empty, spinner. `ui/sonner.tsx` imports `useTheme` from `@/app/theme-provider` (re-apply if re-added). New tokens from `shadcn add` land in `globals.css`: move them to `theme.css`.
+- In-repo theme provider (next-themes logs a React 19.3 script warning) + inline anti-flash script in `index.html`: T6 nginx CSP must allow it (hash or `'unsafe-inline'`).
+- `@/*` alias only in `tsconfig.json` (Vite 8 `resolve.tsconfigPaths`). `envDir` = repo root. Biome needs `css.parser.tailwindDirectives: true`.
+- Forms: `useZodForm(schema, { defaultValues })`, `FormInput|FormTextarea|FormSelect`, `FormError` (root.server), `applyServerErrors(form, error)`; 409 CONFLICT mapped manually.
+- Data: `unwrap(api.projects.$get({ query }))`; toast on error unless `meta: { silent: true }`; staleTime 30 s; no retry on 4xx. Auth hooks in `@/features/auth/api` (`meQueryOptions`, `publicConfigQueryOptions`, `useMe`, `usePublicConfig`, `useSignIn`, `useSignUp`, `useSignOut`).
+- Routes: `_auth` (public, redirects signed-in users), `_app` (protected; `beforeLoad` ensures `me`, `safeRedirectPath`). AppShell replaces the placeholder `AppLayout` in `src/routes/_app.tsx`; root error/not-found states are inline in `__root.tsx` (extract to `components/feedback`).
+- `appConfig: { name, logo: { icon, text }, navItems: { label, to, icon }[] }`; `to` is type-checked against real routes.
+- pnpm printed "Agent skills awaiting approval: @tanstack/router-plugin" — not approved (user decision).
 
 ### Notes for later tasks (from T3)
 
@@ -170,4 +183,4 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
 
 ## Next step
 
-T4 web foundation.
+T5 app shell, global components and projects UI.

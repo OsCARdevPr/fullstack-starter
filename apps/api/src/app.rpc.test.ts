@@ -4,6 +4,7 @@ import type {
   Me,
   PaginatedEnvelope,
   Project,
+  PublicConfig,
 } from "@starter/contracts";
 import { hc, type InferRequestType, type InferResponseType } from "hono/client";
 import { describe, expect, expectTypeOf, it } from "vitest";
@@ -24,6 +25,16 @@ describe("AppType RPC client", () => {
 
     expectTypeOf(body).toEqualTypeOf<{ data: { status: "ok" } }>();
     expect(body).toEqual({ data: { status: "ok" } });
+  });
+
+  it("types the public config response from the shared contract", async () => {
+    const client = createClient();
+    const response = await client.api.config.$get();
+
+    expectTypeOf<InferResponseType<typeof client.api.config.$get, 200>>().toEqualTypeOf<{
+      data: PublicConfig;
+    }>();
+    expect(await response.json()).toEqual({ data: { tenancyMode: "single", allowSignup: false } });
   });
 
   it("types the me response from the shared contract", async () => {
