@@ -93,7 +93,7 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
 
 - [x] **T1 Monorepo foundation + contracts** — pnpm workspace, root scripts (including `verify` = typecheck + lint + test), `tsconfig.base.json`, Biome, `.editorconfig`, `packages/contracts` (errors, http envelopes, common, `projects` module schemas) with tests. Route: delegated writer (2+ non-trivial files). Note: first run was interrupted by a session end after root config; resumed.
   - [ ] **T1a `.env.example`** — blocked: writing `.env*` files is denied by the user's permission settings. Content is drafted; pending user decision.
-- [ ] **T2 API core** — env, db client, auth schema, Better Auth, middleware stack, error system, `health` and `me` modules, tests for error handling and validation. Route: delegated writer.
+- [x] **T2 API core** — env, db client, auth schema, Better Auth, middleware stack, error system, `health` and `me` modules, tests for error handling and validation. Route: delegated writer.
 - [ ] **T3 API example module** — `projects` tenant-scoped CRUD (routes/service/repository), migrations, seed (admin + default org), integration tests against Postgres. Route: delegated writer.
 - [ ] **T4 Web foundation** — Vite + React 19 + Tailwind v4 + shadcn/ui init, `theme.css` tokens + dark mode, providers, api client + `ApiError`, auth client, router with guards, sign-in/sign-up pages, tests. Route: delegated writer.
 - [ ] **T5 Web app shell + global components + projects feature** — AppShell/AppSidebar from `app.config.ts`, Topbar, UserMenu, OrgSwitcher, feedback/data/form components, projects list/create/edit/delete. Route: delegated writer.
@@ -119,7 +119,8 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
 
 | Task | Route | Commit | Checks | Review tier / outcome |
 |---|---|---|---|---|
-| T1 | delegated | (this commit) | RED: 4/4 test files failed (missing modules). GREEN: `pnpm verify` exit 0 — tsc clean, biome 14 files clean, 59/59 tests. Parent spot check: `pnpm verify` 59/59. | pending assess |
+| T1 | delegated | 87dbfee | RED: 4/4 test files failed (missing modules). GREEN: `pnpm verify` exit 0 — tsc clean, biome 14 files clean, 59/59 tests. Parent spot check: `pnpm verify` 59/59. | medium, `slice_budget_reached`; consent granted (lineage review-69d3bb21b269fbb3, lens review-reliability). Capture failed in preflight: the host `claude` CLI is not logged in (environment). Slot re-offered by STATUS; pending user decision. |
+| T2 | delegated | (this commit) | RED: 14/14 api test files + contracts `me.test.ts` failed (missing modules). GREEN: `pnpm verify` exit 0 — biome 76 files, contracts 65/65, api 105/105. Build: `dist/index.mjs` 34 kB, contracts inlined. Smoke (prod mode): `/api/health` 200, unknown route 404 envelope + matching `x-request-id`, `/ready` 503 without DB, SIGTERM clean exit. Parent spot check: `pnpm verify` 65/65 + 105/105. | deferred until the T1 review closes (boundary must advance first) |
 
 ### Notes for later tasks (from T1)
 
@@ -131,6 +132,19 @@ Planning heuristic: about 400 authored changed lines per task (advisory, not a g
 - `updateProjectSchema` is built from default-free fields (Zod 4 `.partial()` still applies defaults).
 - T2: reject the dev placeholder `BETTER_AUTH_SECRET` in production. T4: Vite `envDir` = repo root.
 
+### Notes for later tasks (from T2)
+
+- Module pattern: `new Hono<AppEnv>().use(session(auth)).use(requireAuth).use(tenant(tenancy))`, chained `.use` for type narrowing; `validate("json"|"query", schema)`, `ok()`, `paginated()`; mount with `.route()` in `app.ts`. `AppDeps = { env, db, auth, logger, tenancy, rateLimitStore? }`.
+- `/api/me` uses `optionalTenant`: a multi-mode user without an organization gets `organization: null, role: null` (so the web can show "create your first organization").
+- `AUTH_ALLOW_SIGNUP` defaults to `false` (secure by default); the dev `.env.example` sets it to `true`.
+- Body-limit violations map to 400 `BAD_REQUEST` (no 413 code in contracts yet; `PAYLOAD_TOO_LARGE` is a possible follow-up).
+- Better Auth runs `user.create.after` after session creation on sign-up; the session hook also ensures default-org membership. Depends on the Drizzle adapter running with `transaction: false` (commented in code).
+- Generated auth schema has hand edits (timestamptz, created_at defaults, unique `member(organization_id, user_id)`), listed in its header; re-apply after `pnpm auth:generate`. Better Auth CLI is now the `auth` package.
+- Better Auth rate limit is DB-backed: 5 sign-ins / 3 sign-ups per minute per IP — integration tests must account for it.
+- `TRUST_PROXY=true` trusts exactly one hop; the auth router overwrites `X-Forwarded-For` before Better Auth.
+- pnpm 12 requires `allowBuilds: { esbuild: true }` in `pnpm-workspace.yaml`.
+- Web: `import type { AppType } from "@starter/api"` + `hc<AppType>()`; `/api/auth/*` returns Better Auth's `{ code, message }` shape (map separately to `ApiError`); cookies `better-auth.session_token` (dev) / `__Secure-better-auth.session_token` (prod), httpOnly, `SameSite=Lax`.
+
 ## Next step
 
-T1a decision, then T2 API core.
+T1 review retry (user logging in the `claude` CLI), T1a decision, then T3.
