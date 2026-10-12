@@ -32,12 +32,33 @@ function buildProject(overrides: Partial<Project> = {}): Project {
   };
 }
 
-/** Repository double: scopes by organization like the real one and records list queries. */
+/** What Drizzle throws when the unique name index rejects a row: the driver error is the cause. */
+function duplicateNameError() {
+  const driverError = Object.assign(new Error("duplicate key value violates unique constraint"), {
+    code: "23505",
+    constraint_name: "projects_organization_id_name_uidx",
+  });
+  return new Error("Failed query", { cause: driverError });
+}
+
+/**
+ * Repository double: scopes by organization and rejects duplicate names like the real one, and
+ * records list queries.
+ */
 function createFakeRepository(initial: Project[]) {
   const store = [...initial];
   const listQueries: ListProjectsQuery[] = [];
   const find = (organizationId: string, id: string) =>
     store.find((project) => project.organizationId === organizationId && project.id === id);
+  const assertNameFree = (organizationId: string, name: string, exceptId?: string) => {
+    const taken = store.some(
+      (project) =>
+        project.organizationId === organizationId &&
+        project.name === name &&
+        project.id !== exceptId,
+    );
+    if (taken) throw duplicateNameError();
+  };
 
   const repository: ProjectsRepository = {
     async list(organizationId, query) {
@@ -49,6 +70,7 @@ function createFakeRepository(initial: Project[]) {
       return find(organizationId, id) ?? null;
     },
     async create(organizationId, input) {
+      assertNameFree(organizationId, input.name);
       const project = buildProject({
         organizationId,
         name: input.name,
@@ -61,6 +83,7 @@ function createFakeRepository(initial: Project[]) {
     async update(organizationId, id, input) {
       const project = find(organizationId, id);
       if (!project) return null;
+      if (input.name !== undefined) assertNameFree(organizationId, input.name, id);
       for (const [key, value] of Object.entries(input)) {
         if (value !== undefined) Object.assign(project, { [key]: value });
       }
@@ -230,6 +253,19 @@ describe("projects router", () => {
       });
       expect(store).toHaveLength(0);
     });
+
+    it("responds 409 CONFLICT with a specific message for a duplicate name", async () => {
+      const existing = buildProject({ name: "Website" });
+      const { request, store } = setup({ projects: [existing] });
+      const response = await request("POST", "", { name: "Website" });
+
+      expect(response.status).toBe(409);
+      expect(await readError(response)).toMatchObject({
+        code: "CONFLICT",
+        message: "A project with this name already exists.",
+      });
+      expect(store).toEqual([existing]);
+    });
   });
 
   describe("PATCH /:id", () => {
@@ -254,6 +290,18 @@ describe("projects router", () => {
 
       expect(response.status).toBe(422);
       expect(error.details).toMatchObject({ formErrors: [expect.any(String)] });
+    });
+
+    it("responds 409 CONFLICT when renaming to a name the organization already uses", async () => {
+      const taken = buildProject({ name: "Website" });
+      const other = buildProject({ name: "Shop" });
+      const response = await setup({ projects: [taken, other] }).request("PATCH", `/${other.id}`, {
+        name: "Website",
+      });
+
+      expect(response.status).toBe(409);
+      expect((await readError(response)).message).toBe("A project with this name already exists.");
+      expect(other.name).toBe("Shop");
     });
   });
 

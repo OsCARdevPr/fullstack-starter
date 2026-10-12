@@ -19,7 +19,12 @@
     "verify": "pnpm typecheck && pnpm lint && pnpm test",
     "db:generate": "pnpm --filter @starter/api db:generate",
     "db:migrate": "pnpm --filter @starter/api db:migrate",
-    "db:seed": "pnpm --filter @starter/api db:seed"
+    "db:seed": "pnpm --filter @starter/api db:seed",
+    "db:up": "docker compose -f docker/compose.dev.yaml up -d",
+    "db:down": "docker compose -f docker/compose.dev.yaml down",
+    "docker:up": "docker compose -f docker/compose.yaml up --build -d",
+    "docker:seed": "docker compose -f docker/compose.yaml --profile seed run --rm seed",
+    "docker:down": "docker compose -f docker/compose.yaml down"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15"

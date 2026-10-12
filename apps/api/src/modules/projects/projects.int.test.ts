@@ -112,12 +112,14 @@ describe("projects API against Postgres", () => {
     const original = await createProject(owner, { name: "Website" });
     const other = await createProject(owner, { name: "Shop" });
 
+    const nameTaken = { code: "CONFLICT", message: "A project with this name already exists." };
     const duplicate = await owner("POST", "/api/projects", { name: "Website" });
     expect(duplicate.status).toBe(409);
-    expect(await errorCode(duplicate)).toBe("CONFLICT");
+    expect(apiErrorBodySchema.parse(await duplicate.json()).error).toMatchObject(nameTaken);
 
     const rename = await owner("PATCH", `/api/projects/${other.id}`, { name: original.name });
     expect(rename.status).toBe(409);
+    expect(apiErrorBodySchema.parse(await rename.json()).error).toMatchObject(nameTaken);
 
     await createProject(outsider, { name: "Website" });
   });

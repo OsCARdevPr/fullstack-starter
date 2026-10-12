@@ -1,0 +1,16 @@
+# Keep the build context small and free of secrets. Images install their own dependencies.
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+**/.DS_Store
+**/.env
+**/.env.*
+**/.turbo
+**/.tanstack
+.git
+.codegraph
+.claude
+odd
+docker

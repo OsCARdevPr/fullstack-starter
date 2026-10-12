@@ -1,7 +1,8 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
-import { createQueryClient, shouldRetry } from "./query-client";
+import { createQueryClient, type RequestMeta, shouldRetry } from "./query-client";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
@@ -18,23 +19,37 @@ function failWith(error: Error) {
   };
 }
 
+/** Refetches a query that already has cached data, as a background refresh does. */
+async function failRefetch(client: QueryClient, error: Error, meta?: RequestMeta) {
+  client.setQueryData(["a"], { cached: true });
+  await client
+    .fetchQuery({ queryKey: ["a"], queryFn: failWith(error), staleTime: 0, meta })
+    .catch(() => {});
+}
+
 describe("createQueryClient", () => {
   beforeEach(() => vi.mocked(toast.error).mockClear());
 
-  it("shows a toast with the error message when a query fails", async () => {
+  it("shows a toast with the error message when a background refetch fails", async () => {
+    const client = createQueryClient({ onUnauthenticated: vi.fn() });
+
+    await failRefetch(client, badRequest);
+
+    expect(toast.error).toHaveBeenCalledWith("Bad input.");
+  });
+
+  it("leaves a first-load query failure to the inline error state (no toast)", async () => {
     const client = createQueryClient({ onUnauthenticated: vi.fn() });
 
     await client.fetchQuery({ queryKey: ["a"], queryFn: failWith(badRequest) }).catch(() => {});
 
-    expect(toast.error).toHaveBeenCalledWith("Bad input.");
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("stays quiet for queries marked meta.silent", async () => {
     const client = createQueryClient({ onUnauthenticated: vi.fn() });
 
-    await client
-      .fetchQuery({ queryKey: ["a"], queryFn: failWith(badRequest), meta: { silent: true } })
-      .catch(() => {});
+    await failRefetch(client, badRequest, { silent: true });
 
     expect(toast.error).not.toHaveBeenCalled();
   });

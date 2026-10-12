@@ -1,0 +1,92 @@
+# Full stack: PostgreSQL, migrations, API and web (nginx serves the SPA and proxies /api).
+#   BETTER_AUTH_SECRET=$(openssl rand -base64 32) pnpm docker:up   -> http://localhost:8080
+#   pnpm docker:seed    (admin from SEED_ADMIN_* + sample projects; safe to repeat)
+#   pnpm docker:down    (docker compose -f docker/compose.yaml down -v also deletes the data)
+#
+# API settings, from lowest to highest priority:
+# 1. The API's defaults (apps/api/src/config/env.ts).
+# 2. The repository .env when it exists: TENANCY_MODE, AUTH_ALLOW_SIGNUP, SEED_ADMIN_*, LOG_LEVEL...
+# 3. `environment` below: what this topology needs (database host, public URL, production mode).
+#    It always wins, so the dev URLs and the dev-only secret in .env never reach these containers.
+# ${...} values (BETTER_AUTH_SECRET, WEB_PORT, POSTGRES_*, VITE_APP_NAME) are substituted from the
+# shell or from docker/.env: Compose reads the .env next to this file, not the repository one.
+name: fullstack-starter
+
+x-api: &api
+  build:
+    context: ..
+    dockerfile: apps/api/Dockerfile
+  env_file:
+    - path: ../.env
+      required: false
+  environment:
+    NODE_ENV: production
+    PORT: "3000"
+    DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (at least 32 chars, e.g. openssl rand -base64 32) in the shell or docker/.env}
+    BETTER_AUTH_URL: http://localhost:${WEB_PORT:-8080}
+    WEB_ORIGIN: http://localhost:${WEB_PORT:-8080}
+    # nginx is the only hop in front of the API.
+    TRUST_PROXY: "true"
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql/<major>, so mount the parent.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    <<: *api
+    command: ["node", "dist/migrate.mjs"]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *api
+    restart: unless-stopped
+    # Health: the image's HEALTHCHECK polls GET /api/health. Not published: reach it through web.
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_APP_NAME: ${VITE_APP_NAME:-}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+        # nginx resolves `api` once at startup; restart it when the API container is replaced.
+        restart: true
+
+  seed:
+    <<: *api
+    profiles: [seed]
+    command: ["node", "dist/seed.mjs"]
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:

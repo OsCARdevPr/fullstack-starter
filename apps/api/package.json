@@ -9,6 +9,9 @@
       "types": "./src/app.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
     "build": "tsdown",
