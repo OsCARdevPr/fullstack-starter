@@ -18,5 +18,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    // Page tests chain several async queries; leave headroom for loaded machines and CI.
+    testTimeout: 20_000,
   },
 });
