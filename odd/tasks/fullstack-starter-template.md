@@ -27,6 +27,16 @@ Every project re-implements the same plumbing (auth, error envelopes, validation
 | Topology | Same origin in prod: nginx serves the SPA and proxies `/api` to the API; Vite proxy in dev | First-party `SameSite=Lax` cookies, no CORS surface in prod. |
 | AI-first development | `AGENTS.md`/`CLAUDE.md` per app, module generator (`pnpm gen:module <name>`), project skills in `.claude/skills/`, single feedback loop `pnpm verify`, `projects` as the canonical reference module | User-approved scope addition (2026-10-11): agents need explicit rules, one pattern to copy, and a fast self-check loop. Cost: generator templates must evolve with the pattern. |
 
+### Simplicity directive (user, 2026-10-11)
+
+"Finish it until it is a robust template, including the frontend — keep it simple; it will be reused across many projects." Consequences for the remaining tasks:
+- Prefer fewer dependencies and plain code over clever abstractions; every file must be easy to copy.
+- `DataTable` is a small column-config component over shadcn `Table` + `Pagination` (no TanStack Table).
+- The module generator copies the canonical `projects` module and renames tokens (no separate template files, so it cannot drift from the pattern).
+- `pnpm verify` stays database-free (fast agent loop); Postgres integration tests run with `pnpm test:integration`.
+- The `odd/` folder is removed from the template at closure (the feature document is archived outside the repo) so generated projects start clean.
+- Native reviews: the in-process reviewer needs the host `claude` CLI logged in; until then reviews stay pending and are resolved once at the end with the user.
+
 ## Architecture
 
 ```
